@@ -1,0 +1,17 @@
+# ambiente virtual
+venv/
+.venv/
+
+# cache do Python e do Jupyter
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# IDEs e sistema
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# segredos
+.env
