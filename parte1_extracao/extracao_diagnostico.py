@@ -26,7 +26,7 @@ ARQ_SAIDA_DIFICEIS = PASTA / "resultados_casos_dificeis.csv"
 SEM_SINTOMA = "nenhum sintoma reconhecido, encaminhar para avaliação"
 
 
-# ---------------------------------------------------------------- Etapa 1
+
 def normalizar(texto: str) -> str:
     """Minúsculas + sem acento + pontuação vira espaço. 'Tórax' == 'torax'."""
     texto = unicodedata.normalize("NFKD", str(texto))
@@ -35,7 +35,7 @@ def normalizar(texto: str) -> str:
     return re.sub(r"\s+", " ", texto).strip()
 
 
-# ---------------------------------------------------------------- Etapa 2
+
 def carregar_mapa(caminho=ARQ_MAPA) -> list[tuple[str, str]]:
     """Lê o CSV e devolve pares únicos (expressão normalizada, doença)."""
     df = pd.read_csv(caminho, encoding="utf-8")
@@ -53,7 +53,7 @@ def carregar_frases(caminho) -> list[str]:
         return [l.strip() for l in f if l.strip()]
 
 
-# ---------------------------------------------------------------- Etapa 3
+
 def achar_sintomas(frase_norm: str, pares) -> dict:
     """
     Devolve {expressão: [doenças]} para cada expressão presente na frase.
@@ -66,7 +66,7 @@ def achar_sintomas(frase_norm: str, pares) -> dict:
     return achados
 
 
-# ---------------------------------------------------------------- Etapa 4
+
 def pontuar(achados: dict) -> list[tuple[str, int]]:
     """+1 por sintoma encontrado para cada doença ligada a ele. Ordem decrescente."""
     pontos = {}
@@ -91,7 +91,7 @@ def sugerir(ranking: list[tuple[str, int]]) -> tuple[str, int, str]:
     return diag, pts, obs
 
 
-# ---------------------------------------------------------------- Extra
+
 PADROES_TEMPO = [
     r"\b(?:ha|faz|fazem)\s+(\w+\s+(?:dias?|semanas?|mes(?:es)?|horas?|anos?))\b",
     r"\b(desde\s+(?:ontem|anteontem|hoje|\w+))\b",
@@ -107,7 +107,7 @@ def extrair_duracao(frase_norm: str) -> str:
     return "não informado"
 
 
-# ---------------------------------------------------------------- Pipeline
+
 def analisar(frases, pares) -> pd.DataFrame:
     linhas = []
     for frase in frases:
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     print(f"Mapa carregado: {len(pares)} expressões, "
           f"{len({d for _, d in pares})} doenças.")
 
-    # --- Parte principal: as 10 frases
+
     resultado = analisar(carregar_frases(ARQ_FRASES), pares)
     mostrar(resultado)
     resultado.to_csv(ARQ_SAIDA, index=False, encoding="utf-8-sig")
