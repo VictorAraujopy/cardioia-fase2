@@ -1,0 +1,37 @@
+sintoma_1,sintoma_2,doenca_associada
+dor no peito,aperto no tórax,Infarto agudo do miocárdio
+aperto no peito,peso no peito,Infarto agudo do miocárdio
+dor que vai para o braço,vai pro braço,Infarto agudo do miocárdio
+dor que irradia para o braço,dor que irradia para a mandíbula,Infarto agudo do miocárdio
+suor frio,sudorese intensa,Infarto agudo do miocárdio
+enjoo com dor no peito,sensação de morte iminente,Infarto agudo do miocárdio
+dor no peito ao esforço,dor no peito ao fazer esforço,Angina
+aperto no peito ao subir escada,quando subo escada,Angina
+melhora com repouso,passa quando descanso,Angina
+dor no peito ao caminhar,aperto ao subir ladeira,Angina
+cansaço constante,fadiga,Insuficiência cardíaca
+inchaço nas pernas,tornozelos inchados,Insuficiência cardíaca
+falta de ar ao deitar,acordo sufocado,Insuficiência cardíaca
+durmo com travesseiros,dormir sentado,Insuficiência cardíaca
+cansaço aos pequenos esforços,inchaço nos pés,Insuficiência cardíaca
+coração disparado,palpitação,Arritmia
+batedeira,coração acelerado,Arritmia
+coração falhando,batimento irregular,Arritmia
+tontura,sensação de desmaio,Arritmia
+dor de cabeça na nuca,zumbido no ouvido,Hipertensão arterial
+pressão alta,pressão elevada,Hipertensão arterial
+visão embaçada,pontos luminosos na visão,Hipertensão arterial
+dor de cabeça forte,sangramento no nariz,Hipertensão arterial
+dor no peito que piora ao respirar,dor no peito que piora quando respiro fundo,Pericardite
+melhora ao inclinar para frente,melhora quando me inclino para a frente,Pericardite
+dormir sentado por causa da dor,dor que piora ao deitar,Pericardite
+febre baixa,fraqueza intensa,Miocardite
+depois de uma gripe,depois de uma virose,Miocardite
+cansaço depois de infecção,dor no peito leve com febre,Miocardite
+quase desmaiei,desmaio ao esforço,Estenose aórtica
+tontura ao esforço,falta de ar ao esforço,Estenose aórtica
+falta de ar quando faço esforço,aperto no peito ao esforço,Estenose aórtica
+perna inchada,perna quente,Trombose venosa profunda
+dor na panturrilha,perna vermelha,Trombose venosa profunda
+viagem longa,ficar muito tempo parado,Trombose venosa profunda
+dor ao caminhar na perna,perna dolorida e inchada,Trombose venosa profunda
