@@ -33,6 +33,8 @@ cardioia-fase2/
 
 ## Como rodar
 
+Requer **Python 3.11 ou mais novo** (testado em clone limpo com Python 3.11 e 3.14, com as versões fixadas no `requirements.txt`).
+
 ```bash
 git clone https://github.com/VictorAraujopy/cardioia-fase2.git
 cd cardioia-fase2
