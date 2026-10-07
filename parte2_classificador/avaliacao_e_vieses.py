@@ -253,14 +253,6 @@ def rodar_frases_cegas(dataset, frases_cegas):
     tabela.add_row("Falsos positivos", str(len(falsos_positivos)), "leve classificado como grave")
     console.print(tabela)
 
-    erros = resultado[resultado["real"] != resultado["previsto"]]
-    for erro in erros.itertuples():
-        console.print(f"\n[bold red]✗ Erro:[/bold red] era {risco_colorido(erro.real)}, "
-                      f"o modelo disse {risco_colorido(erro.previsto)} ({erro.prob_alto:.2f})")
-        console.print(f"  \"{erro.frase}\"")
-        console.print(f"  [dim]palavras que mais pesaram:[/dim] "
-                      f"[yellow]{palavras_que_mais_pesaram(modelo_final, erro.frase)}[/yellow]")
-
     return modelo_final, resultado
 
 
@@ -287,7 +279,6 @@ def mostrar_certeza_do_modelo(resultado):
     tabela.add_column("0" + " " * 18 + "0.5" + " " * 18 + "1", no_wrap=True, min_width=41)
     tabela.add_column("Real", no_wrap=True)
     tabela.add_column("", no_wrap=True)
-    tabela.add_column("Frase", no_wrap=True, overflow="ellipsis", max_width=40)
 
     da_menor_para_a_maior = resultado.sort_values("prob_alto")
     abaixo_do_limite = da_menor_para_a_maior[da_menor_para_a_maior["prob_alto"] < 0.5]
@@ -297,7 +288,7 @@ def mostrar_certeza_do_modelo(resultado):
         marca = "[green]✓[/green]" if linha.real == linha.previsto else "[bold red]✗[/bold red]"
         tabela.add_row(f"{linha.prob_alto:.2f}",
                        regua_de_probabilidade(linha.prob_alto, COR_DO_RISCO[linha.real]),
-                       risco_colorido(linha.real), marca, linha.frase,
+                       risco_colorido(linha.real), marca,
                        end_section=(linha.Index == ultima_antes_do_limite))
     console.print(tabela)
 
