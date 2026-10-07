@@ -277,8 +277,8 @@ def mostrar_certeza_do_modelo(resultado):
     tabela = Table(box=box.SIMPLE)
     tabela.add_column("Prob.", justify="right", no_wrap=True)
     tabela.add_column("0" + " " * 18 + "0.5" + " " * 18 + "1", no_wrap=True, min_width=41)
-    tabela.add_column("Modelo disse", no_wrap=True)
     tabela.add_column("Resposta certa", no_wrap=True)
+    tabela.add_column("Modelo disse", no_wrap=True)
     tabela.add_column("", no_wrap=True)
 
     da_menor_para_a_maior = resultado.sort_values("prob_alto")
@@ -289,7 +289,7 @@ def mostrar_certeza_do_modelo(resultado):
         marca = "[green]✓[/green]" if linha.real == linha.previsto else "[bold red]✗[/bold red]"
         tabela.add_row(f"{linha.prob_alto:.2f}",
                        regua_de_probabilidade(linha.prob_alto, COR_DO_RISCO[linha.previsto]),
-                       risco_colorido(linha.previsto), risco_colorido(linha.real), marca,
+                       risco_colorido(linha.real), risco_colorido(linha.previsto), marca,
                        end_section=(linha.Index == ultima_antes_do_limite))
     console.print(tabela)
 
