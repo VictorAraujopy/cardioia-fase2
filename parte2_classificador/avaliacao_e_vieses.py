@@ -1,7 +1,10 @@
 
+import sys
 from pathlib import Path
 
 import pandas as pd
+from rich.console import Console
+from rich.table import Table
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, make_scorer, recall_score
@@ -16,8 +19,12 @@ CAMINHO_FRASES_CEGAS = PASTA_DO_SCRIPT / "frases_teste_cegas.csv"
 
 ALTO = "alto risco"
 BAIXO = "baixo risco"
+COR_DO_RISCO = {ALTO: "red", BAIXO: "green"}
 SEMENTE = 42
 MODELO_FINAL = "Regressão Logística"
+
+PAUSAR_ENTRE_PARTES = "--pausar" in sys.argv
+console = Console()
 
 FRASE_VIDEO = "Há dois dias sinto um aperto no peito que vai pro braço quando subo escada."
 
@@ -36,22 +43,25 @@ TROCA_DE_GENERO = [
      "feminino": "Acordei sufocada de madrugada e o coração tava disparado."},
 ]
 
-TESTES_PROVOCATIVOS = [
-    {"teste": "vídeo: original",
+TESTES_COM_A_FRASE_DO_VIDEO = [
+    {"teste": "original",
      "frase": FRASE_VIDEO,
      "esperado": ALTO},
-    {"teste": "vídeo: com negação",
+    {"teste": "com negação",
      "frase": "Há dois dias não sinto aperto no peito nem nada no braço quando subo escada.",
      "esperado": BAIXO},
-    {"teste": "vídeo: com gíria",
+    {"teste": "com gíria",
      "frase": "Há dois dias sinto uma gastura no peito que corre pro braço quando subo escada.",
      "esperado": ALTO},
-    {"teste": "vídeo: com 'depois de'",
+    {"teste": "com 'depois de'",
      "frase": "Há dois dias sinto um aperto no peito que vai pro braço depois de subir escada.",
      "esperado": ALTO},
-    {"teste": "vídeo: erro de digitação",
+    {"teste": "com erro de digitação",
      "frase": "Há dois dias sinto um aperto no pieto que vai pro braço quando subo escada.",
      "esperado": ALTO},
+]
+
+OUTROS_TESTES_PROVOCATIVOS = [
     {"teste": "negação simples",
      "frase": "Não sinto dor no peito.",
      "esperado": BAIXO},
@@ -69,10 +79,21 @@ TESTES_PROVOCATIVOS = [
 
 
 def titulo(texto):
-    print()
-    print("=" * 100)
-    print(texto)
-    print("=" * 100)
+    console.print()
+    console.rule(f"[bold cyan]{texto}")
+    console.print()
+
+
+def pausa():
+    """Com --pausar, espera um Enter e limpa a tela antes da próxima parte (bom para apresentar)."""
+    if PAUSAR_ENTRE_PARTES:
+        console.input("\n[dim]Enter para continuar[/dim] ")
+        console.clear()
+
+
+def risco_colorido(rotulo):
+    cor = COR_DO_RISCO[rotulo]
+    return f"[{cor}]{rotulo}[/{cor}]"
 
 
 def criar_pipeline(classificador):
@@ -124,7 +145,7 @@ def palavras_que_mais_pesaram(modelo, frase, quantas=3):
         mais_fortes = contribuicao.nlargest(quantas)
     else:
         mais_fortes = contribuicao.nsmallest(quantas)
-    return ", ".join(f"'{palavra}' ({valor:+.2f})" for palavra, valor in mais_fortes.items())
+    return ", ".join(f"'{palavra}'" for palavra in mais_fortes.index)
 
 
 def carregar_dados():
@@ -136,13 +157,17 @@ def carregar_dados():
     frases_do_dataset = set(dataset["frase"].str.lower())
     assert not frases_cegas["frase"].str.lower().isin(frases_do_dataset).any(), "frase cega está no dataset"
 
-    print(f"Dataset da P2:      {len(dataset)} frases {dataset['situacao'].value_counts().to_dict()}")
-    print(f"Frases cegas da P3: {len(frases_cegas)} frases {frases_cegas['situacao'].value_counts().to_dict()}")
+    contagem_dataset = dataset["situacao"].value_counts()
+    contagem_cegas = frases_cegas["situacao"].value_counts()
+    console.print(f"Dataset da P2: [bold]{len(dataset)}[/bold] frases "
+                  f"({contagem_dataset[ALTO]} alto, {contagem_dataset[BAIXO]} baixo)")
+    console.print(f"Frases cegas da P3: [bold]{len(frases_cegas)}[/bold] frases "
+                  f"({contagem_cegas[ALTO]} alto, {contagem_cegas[BAIXO]} baixo)")
     return dataset, frases_cegas
 
 
 def comparar_modelos(dataset):
-    titulo("a) Comparação de 3 modelos · validação cruzada com 5 folds")
+    titulo("a) Comparação de 3 modelos")
 
     # o CSV vem ordenado (75 alto e depois 75 baixo); embaralhar evita folds com blocos de frases parecidas
     cinco_folds = StratifiedKFold(n_splits=5, shuffle=True, random_state=SEMENTE)
@@ -162,23 +187,29 @@ def comparar_modelos(dataset):
             "recall_alto_media": notas["test_recall_alto"].mean(),
             "recall_alto_desvio": notas["test_recall_alto"].std(),
         })
-    tabela = pd.DataFrame(linhas).sort_values("acuracia_media", ascending=False)
+    resultados = pd.DataFrame(linhas).sort_values("acuracia_media", ascending=False)
 
-    print(f"{'modelo':<24}{'acurácia (média ± desvio)':<30}recall de alto risco (média ± desvio)")
-    for linha in tabela.itertuples():
-        acuracia = f"{linha.acuracia_media:.1%} ± {linha.acuracia_desvio:.1%}"
-        recall = f"{linha.recall_alto_media:.1%} ± {linha.recall_alto_desvio:.1%}"
-        print(f"{linha.modelo:<24}{acuracia:<30}{recall}")
+    tabela = Table(title="Validação cruzada com 5 folds (média ± desvio)")
+    tabela.add_column("Modelo")
+    tabela.add_column("Acurácia", justify="right")
+    tabela.add_column("Recall de alto risco", justify="right")
+    for linha in resultados.itertuples():
+        tabela.add_row(linha.modelo,
+                       f"{linha.acuracia_media:.1%} ± {linha.acuracia_desvio:.1%}",
+                       f"{linha.recall_alto_media:.1%} ± {linha.recall_alto_desvio:.1%}")
+    console.print(tabela)
 
-    primeiro = tabela.iloc[0]
-    segundo = tabela.iloc[1]
+    primeiro = resultados.iloc[0]
+    segundo = resultados.iloc[1]
     diferenca = primeiro.acuracia_media - segundo.acuracia_media
     maior_desvio = max(primeiro.acuracia_desvio, segundo.acuracia_desvio)
-    print(f"\nDiferença entre {primeiro.modelo} e {segundo.modelo}: {diferenca:.1%} "
-          f"(o resultado balança até {maior_desvio:.1%} entre os folds)")
+    console.print(f"\nDiferença entre {primeiro.modelo} e {segundo.modelo}: [bold]{diferenca:.1%}[/bold]")
+    console.print(f"O resultado balança até [bold]{maior_desvio:.1%}[/bold] de um fold para outro")
     if diferenca < maior_desvio:
-        print("→ Empate técnico: a diferença é menor que o desvio, pode ser sorte da divisão.")
-    print(f"→ Modelo final: {MODELO_FINAL}. É o modelo da P2 e o único dos três que mostra o peso de cada palavra.")
+        console.print("[bold yellow]→ Empate técnico:[/bold yellow] a diferença é menor que o desvio, "
+                      "pode ser sorte da divisão")
+    console.print(f"[bold green]→ Modelo final: {MODELO_FINAL}[/bold green]")
+    console.print("  [dim]é o modelo da P2 e o único dos três que mostra o peso de cada palavra[/dim]")
 
 
 def conferir_com_o_notebook_da_p2(dataset):
@@ -189,12 +220,12 @@ def conferir_com_o_notebook_da_p2(dataset):
 
     acuracia = accuracy_score(y_teste, previsto)
     recall_alto = recall_score(y_teste, previsto, pos_label=ALTO)
-    print(f"\nConferência com o notebook da P2 (mesmo split 75/25): acurácia {acuracia:.1%}, "
-          f"recall de alto risco {recall_alto:.1%} (no notebook: 86,8% e 89,5%)")
+    console.print(f"\n[dim]Conferência no split da P2 (75/25): acurácia {acuracia:.1%}, "
+                  f"recall {recall_alto:.1%} (notebook: 86,8% e 89,5%)[/dim]")
 
 
 def rodar_frases_cegas(dataset, frases_cegas):
-    titulo(f"b) Frases cegas · {MODELO_FINAL} treinada com as {len(dataset)} frases, rodada uma única vez")
+    titulo(f"b) Frases cegas · {MODELO_FINAL} rodada uma única vez")
 
     modelo_final = criar_pipeline(criar_os_tres_modelos()[MODELO_FINAL])
     modelo_final.fit(dataset["frase"], dataset["situacao"])
@@ -203,26 +234,39 @@ def rodar_frases_cegas(dataset, frases_cegas):
     resultado["previsto"] = modelo_final.predict(resultado["frase"])
     resultado["prob_alto"] = probabilidade_de_alto_risco(modelo_final, resultado["frase"])
 
-    acuracia = accuracy_score(resultado["real"], resultado["previsto"])
-    recall_alto = recall_score(resultado["real"], resultado["previsto"], pos_label=ALTO)
+    acertos = (resultado["real"] == resultado["previsto"]).sum()
+    casos_graves = resultado[resultado["real"] == ALTO]
+    graves_pegos = (casos_graves["previsto"] == ALTO).sum()
     falsos_negativos = resultado[(resultado["real"] == ALTO) & (resultado["previsto"] == BAIXO)]
     falsos_positivos = resultado[(resultado["real"] == BAIXO) & (resultado["previsto"] == ALTO)]
+    acuracia = accuracy_score(resultado["real"], resultado["previsto"])
+    recall_alto = recall_score(resultado["real"], resultado["previsto"], pos_label=ALTO)
 
-    print(f"Acurácia: {acuracia:.1%} | recall de alto risco: {recall_alto:.1%}")
-    print(f"Falsos negativos (grave classificado como leve): {len(falsos_negativos)} | "
-          f"falsos positivos (leve classificado como grave): {len(falsos_positivos)}")
+    tabela = Table(title=f"{len(resultado)} frases que o modelo nunca viu")
+    tabela.add_column("Métrica")
+    tabela.add_column("Valor", justify="right")
+    tabela.add_column("")
+    tabela.add_row("Acurácia", f"[bold]{acuracia:.1%}[/bold]", f"{acertos} de {len(resultado)}")
+    tabela.add_row("Recall de alto risco", f"[bold]{recall_alto:.1%}[/bold]", f"{graves_pegos} de {len(casos_graves)}")
+    tabela.add_row("Falsos negativos", str(len(falsos_negativos)), "grave classificado como leve")
+    tabela.add_row("Falsos positivos", str(len(falsos_positivos)), "leve classificado como grave")
+    console.print(tabela)
 
     menor_prob = resultado["prob_alto"].min()
     maior_prob = resultado["prob_alto"].max()
     perto_do_meio = resultado["prob_alto"].between(0.4, 0.6).sum()
-    print(f"Confiança: a prob. de alto risco ficou entre {menor_prob:.2f} e {maior_prob:.2f}, e "
-          f"{perto_do_meio} de {len(resultado)} frases ficaram entre 0.40 e 0.60 (quase cara ou coroa)")
+    console.print(f"\nConfiança: a probabilidade de alto risco ficou entre "
+                  f"[bold]{menor_prob:.2f}[/bold] e [bold]{maior_prob:.2f}[/bold]")
+    console.print(f"[bold yellow]{perto_do_meio} de {len(resultado)}[/bold yellow] frases ficaram entre "
+                  f"0.40 e 0.60 (quase cara ou coroa)")
 
     erros = resultado[resultado["real"] != resultado["previsto"]]
     for erro in erros.itertuples():
-        print(f"\n  ERRO | real: {erro.real} | previsto: {erro.previsto} (prob. alto {erro.prob_alto:.2f})")
-        print(f"  frase: {erro.frase}")
-        print(f"  palavras que mais pesaram: {palavras_que_mais_pesaram(modelo_final, erro.frase)}")
+        console.print(f"\n[bold red]✗ Erro:[/bold red] era {risco_colorido(erro.real)}, "
+                      f"o modelo disse {risco_colorido(erro.previsto)} ({erro.prob_alto:.2f})")
+        console.print(f"  \"{erro.frase}\"")
+        console.print(f"  [dim]palavras que mais pesaram:[/dim] "
+                      f"[yellow]{palavras_que_mais_pesaram(modelo_final, erro.frase)}[/yellow]")
 
     return modelo_final
 
@@ -234,51 +278,74 @@ def mostrar_palavras_que_mais_pesam(modelo_final):
     mais_puxam_para_alto = pesos.tail(10)[::-1]
     mais_puxam_para_baixo = pesos.head(10)
 
-    print(f"{'puxam para ALTO risco':<34}puxam para BAIXO risco")
+    tabela = Table(title="Peso de cada palavra no modelo final")
+    tabela.add_column("Puxam para ALTO risco", style="red")
+    tabela.add_column("Peso", justify="right")
+    tabela.add_column("Puxam para BAIXO risco", style="green")
+    tabela.add_column("Peso", justify="right")
     for (palavra_alto, peso_alto), (palavra_baixo, peso_baixo) in zip(mais_puxam_para_alto.items(),
                                                                       mais_puxam_para_baixo.items()):
-        print(f"  {palavra_alto:<22}{peso_alto:+.2f}{'':<6}  {palavra_baixo:<22}{peso_baixo:+.2f}")
+        tabela.add_row(palavra_alto, f"{peso_alto:+.2f}", palavra_baixo, f"{peso_baixo:+.2f}")
+    console.print(tabela)
 
 
-def checar_palavras_que_nao_deveriam_pesar(modelo_final):
-    titulo("c2) Palavras que não deveriam pesar (tempo, contexto, pessoa, gênero)")
+def rodar_testes(titulo_da_parte, testes, modelo_final):
+    titulo(titulo_da_parte)
 
-    pesos = pesos_para_alto_risco(modelo_final)
-    for palavra in PALAVRAS_QUE_NAO_DEVERIAM_PESAR:
-        if palavra in pesos.index:
-            print(f"  {palavra:<12}{pesos[palavra]:+.2f}")
+    tabela = Table(show_lines=True)
+    tabela.add_column("")
+    tabela.add_column("Teste e frase")
+    tabela.add_column("Esperado")
+    tabela.add_column("Modelo disse")
+
+    quantos_enganaram = 0
+    for teste in testes:
+        previsto, prob_alto = resposta_do_modelo(modelo_final, teste["frase"])
+        acertou = previsto == teste["esperado"]
+
+        descricao = f"[bold]{teste['teste']}[/bold]\n{teste['frase']}"
+        if acertou:
+            marca = "[green]✓[/green]"
         else:
-            print(f"  {palavra:<12}fora do vocabulário (nenhuma frase do dataset usa)")
+            marca = "[bold red]✗[/bold red]"
+            descricao += f"\n[yellow]pesaram: {palavras_que_mais_pesaram(modelo_final, teste['frase'])}[/yellow]"
+            quantos_enganaram += 1
+
+        tabela.add_row(marca, descricao, risco_colorido(teste["esperado"]),
+                       f"{risco_colorido(previsto)} ({prob_alto:.2f})")
+    console.print(tabela)
+
+    console.print(f"\n[bold]{quantos_enganaram} de {len(testes)}[/bold] testes enganaram o modelo.")
 
 
 def testar_troca_de_genero(modelo_final):
-    titulo("c3) Mesma frase, só muda o gênero")
+    titulo("c4) Mesma frase, só muda o gênero")
 
+    tabela = Table()
+    tabela.add_column("Gênero")
+    tabela.add_column("Frase")
+    tabela.add_column("Modelo disse")
     for par in TROCA_DE_GENERO:
         for genero in ["masculino", "feminino"]:
             previsto, prob_alto = resposta_do_modelo(modelo_final, par[genero])
-            print(f"  {genero:<10}| {previsto:<12}(prob. alto {prob_alto:.2f}) | {par[genero]}")
-        print()
+            tabela.add_row(genero, par[genero], f"{risco_colorido(previsto)} ({prob_alto:.2f})",
+                           end_section=(genero == "feminino"))
+    console.print(tabela)
 
 
-def rodar_testes_provocativos(modelo_final):
-    titulo("c4) Testes provocativos")
+def checar_palavras_que_nao_deveriam_pesar(modelo_final):
+    titulo("c5) Palavras que não deveriam pesar (tempo, contexto, pessoa, gênero)")
 
-    quantos_enganaram = 0
-    for teste in TESTES_PROVOCATIVOS:
-        previsto, prob_alto = resposta_do_modelo(modelo_final, teste["frase"])
-        acertou = previsto == teste["esperado"]
-        if not acertou:
-            quantos_enganaram += 1
-
-        situacao = "ok   " if acertou else "ERROU"
-        print(f"  {situacao} | {teste['teste']:<26}| esperado: {teste['esperado']:<12}| "
-              f"previsto: {previsto:<12}(prob. alto {prob_alto:.2f})")
-        print(f"          {teste['frase']}")
-        if not acertou:
-            print(f"          palavras que mais pesaram: {palavras_que_mais_pesaram(modelo_final, teste['frase'])}")
-
-    print(f"\n{quantos_enganaram} de {len(TESTES_PROVOCATIVOS)} testes provocativos enganaram o modelo.")
+    pesos = pesos_para_alto_risco(modelo_final)
+    tabela = Table()
+    tabela.add_column("Palavra")
+    tabela.add_column("Peso", justify="right")
+    for palavra in PALAVRAS_QUE_NAO_DEVERIAM_PESAR:
+        if palavra in pesos.index:
+            tabela.add_row(palavra, f"{pesos[palavra]:+.2f}")
+        else:
+            tabela.add_row(palavra, "[dim]fora do vocabulário[/dim]")
+    console.print(tabela)
 
 
 def main():
@@ -286,13 +353,24 @@ def main():
 
     comparar_modelos(dataset)
     conferir_com_o_notebook_da_p2(dataset)
+    pausa()
 
     modelo_final = rodar_frases_cegas(dataset, frases_cegas)
+    pausa()
 
     mostrar_palavras_que_mais_pesam(modelo_final)
-    checar_palavras_que_nao_deveriam_pesar(modelo_final)
+    pausa()
+
+    rodar_testes("c2) A frase do vídeo, modificada", TESTES_COM_A_FRASE_DO_VIDEO, modelo_final)
+    pausa()
+
+    rodar_testes("c3) Outros testes provocativos", OUTROS_TESTES_PROVOCATIVOS, modelo_final)
+    pausa()
+
     testar_troca_de_genero(modelo_final)
-    rodar_testes_provocativos(modelo_final)
+    pausa()
+
+    checar_palavras_que_nao_deveriam_pesar(modelo_final)
 
 
 if __name__ == "__main__":

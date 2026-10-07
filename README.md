@@ -163,7 +163,8 @@ Os números são otimistas, porque treino e teste foram escritos pelas mesmas pe
 O notebook da Parte 2 treina e testa um modelo. Esta seção responde outra pergunta: **quanto dá para confiar nele?** Tudo aqui é gerado por `parte2_classificador/avaliacao_e_vieses.py`, com o mesmo CSV, o mesmo TF-IDF e o mesmo split do notebook. O script confere isso: no split da Parte 2, ele reproduz os 86,8% de acurácia e 89,5% de recall.
 
 ```bash
-python parte2_classificador/avaliacao_e_vieses.py
+python parte2_classificador/avaliacao_e_vieses.py             # mostra tudo de uma vez
+python parte2_classificador/avaliacao_e_vieses.py --pausar    # uma parte por tela, Enter avança
 ```
 
 ### Comparação de 3 modelos
