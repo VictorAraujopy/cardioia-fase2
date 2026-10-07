@@ -207,7 +207,7 @@ def comparar_modelos(dataset):
     maior_desvio = max(primeiro.acuracia_desvio, segundo.acuracia_desvio)
     if diferenca < maior_desvio:
         console.print(f"[bold yellow]→ Empate técnico:[/bold yellow] a diferença ({diferenca:.1%}) "
-                      f"é menor que o quanto o resultado balança ({maior_desvio:.1%})")
+                      f"é menor que a variação entre os folds ({maior_desvio:.1%})")
         console.print()
     console.print(f"[bold green]→ Modelo final: {MODELO_FINAL}[/bold green], "
                   f"o único dos três que mostra o peso de cada palavra")
@@ -269,10 +269,10 @@ def regua_de_probabilidade(prob_alto, cor, metade=20):
 
 
 def mostrar_certeza_do_modelo(resultado):
-    titulo("b) Frases cegas · quanto o modelo tem certeza?")
+    titulo("b) Frases cegas · confiança do modelo")
 
-    console.print("O modelo dá a cada frase uma [bold]probabilidade de alto risco[/bold], de 0 a 1. "
-                  "De [bold]0.50[/bold] pra cima, ele responde alto risco.")
+    console.print("Cada frase recebe uma [bold]probabilidade de alto risco[/bold], de 0 a 1. "
+                  "A partir de [bold]0.50[/bold], a resposta é alto risco.")
 
     tabela = Table(box=box.SIMPLE)
     tabela.add_column("Prob.", justify="right", no_wrap=True)
@@ -295,10 +295,10 @@ def mostrar_certeza_do_modelo(resultado):
 
     acertos = (resultado["real"] == resultado["previsto"]).sum()
     perto_do_limite = resultado["prob_alto"].between(0.4, 0.6).sum()
-    console.print(f"Acertou [bold]{acertos} de {len(resultado)}[/bold], mas por pouco: "
-                  f"[bold yellow]{perto_do_limite} de {len(resultado)}[/bold yellow] ficaram entre 0.40 e 0.60, "
-                  f"coladas no limite.")
-    console.print("Uma palavra a mais ou a menos já muda a resposta (ver c2).")
+    console.print(f"[bold]{acertos} de {len(resultado)}[/bold] acertos, mas com pouca margem: "
+                  f"[bold yellow]{perto_do_limite} de {len(resultado)}[/bold yellow] frases ficaram entre 0.40 e 0.60, "
+                  f"próximas do limite.")
+    console.print("Pequenas mudanças no texto podem inverter a classificação (ver c2).")
 
 
 def mostrar_palavras_que_mais_pesam(modelo_final):
@@ -345,7 +345,7 @@ def rodar_testes(titulo_da_parte, testes, modelo_final):
                        f"{risco_colorido(previsto)} ({prob_alto:.2f})")
     console.print(tabela)
 
-    console.print(f"\n[bold]{quantos_enganaram} de {len(testes)}[/bold] testes enganaram o modelo.")
+    console.print(f"\n[bold]{quantos_enganaram} de {len(testes)}[/bold] testes levaram o modelo ao erro.")
 
 
 def testar_troca_de_genero(modelo_final):
@@ -394,7 +394,7 @@ def main():
     mostrar_palavras_que_mais_pesam(modelo_final)
     pausa()
 
-    rodar_testes(f"c2) Mesma queixa do paciente, dita de {len(TESTES_COM_A_FRASE_DO_VIDEO)} jeitos",
+    rodar_testes(f"c2) A mesma queixa do paciente, escrita de {len(TESTES_COM_A_FRASE_DO_VIDEO)} formas",
                  TESTES_COM_A_FRASE_DO_VIDEO, modelo_final)
     pausa()
 
