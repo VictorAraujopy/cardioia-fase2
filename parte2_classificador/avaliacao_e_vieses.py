@@ -160,10 +160,10 @@ def carregar_dados():
 
     contagem_dataset = dataset["situacao"].value_counts()
     contagem_cegas = frases_cegas["situacao"].value_counts()
-    console.print(f"Dataset da P2: [bold]{len(dataset)}[/bold] frases "
+    console.print(f"Frases de treino: [bold]{len(dataset)}[/bold] "
                   f"({contagem_dataset[ALTO]} alto, {contagem_dataset[BAIXO]} baixo)")
-    console.print(f"Frases cegas da P3: [bold]{len(frases_cegas)}[/bold] frases "
-                  f"({contagem_cegas[ALTO]} alto, {contagem_cegas[BAIXO]} baixo)")
+    console.print(f"Frases cegas: [bold]{len(frases_cegas)}[/bold] "
+                  f"({contagem_cegas[ALTO]} alto, {contagem_cegas[BAIXO]} baixo), escritas sem ver as de treino")
     return dataset, frases_cegas
 
 
@@ -221,7 +221,7 @@ def conferir_com_o_notebook_da_p2(dataset):
 
     acuracia = accuracy_score(y_teste, previsto)
     recall_alto = recall_score(y_teste, previsto, pos_label=ALTO)
-    console.print(f"[dim]Conferência no split da P2 (75/25): acurácia {acuracia:.1%}, "
+    console.print(f"[dim]Conferência com o notebook da Parte 2 (mesmo split 75/25): acurácia {acuracia:.1%}, "
                   f"recall {recall_alto:.1%} (notebook: 86,8% e 89,5%)[/dim]")
 
 
