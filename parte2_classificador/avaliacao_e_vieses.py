@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+from rich import box
 from rich.console import Console
 from rich.table import Table
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -198,18 +199,18 @@ def comparar_modelos(dataset):
                        f"{linha.acuracia_media:.1%} ± {linha.acuracia_desvio:.1%}",
                        f"{linha.recall_alto_media:.1%} ± {linha.recall_alto_desvio:.1%}")
     console.print(tabela)
+    console.print()
 
     primeiro = resultados.iloc[0]
     segundo = resultados.iloc[1]
     diferenca = primeiro.acuracia_media - segundo.acuracia_media
     maior_desvio = max(primeiro.acuracia_desvio, segundo.acuracia_desvio)
-    console.print(f"\nDiferença entre {primeiro.modelo} e {segundo.modelo}: [bold]{diferenca:.1%}[/bold]")
-    console.print(f"O resultado balança até [bold]{maior_desvio:.1%}[/bold] de um fold para outro")
     if diferenca < maior_desvio:
-        console.print("[bold yellow]→ Empate técnico:[/bold yellow] a diferença é menor que o desvio, "
-                      "pode ser sorte da divisão")
-    console.print(f"[bold green]→ Modelo final: {MODELO_FINAL}[/bold green]")
-    console.print("  [dim]é o modelo da P2 e o único dos três que mostra o peso de cada palavra[/dim]")
+        console.print(f"[bold yellow]→ Empate técnico:[/bold yellow] a diferença ({diferenca:.1%}) "
+                      f"é menor que o quanto o resultado balança ({maior_desvio:.1%})")
+        console.print()
+    console.print(f"[bold green]→ Modelo final: {MODELO_FINAL}[/bold green], "
+                  f"o único dos três que mostra o peso de cada palavra")
 
 
 def conferir_com_o_notebook_da_p2(dataset):
@@ -220,7 +221,7 @@ def conferir_com_o_notebook_da_p2(dataset):
 
     acuracia = accuracy_score(y_teste, previsto)
     recall_alto = recall_score(y_teste, previsto, pos_label=ALTO)
-    console.print(f"\n[dim]Conferência no split da P2 (75/25): acurácia {acuracia:.1%}, "
+    console.print(f"[dim]Conferência no split da P2 (75/25): acurácia {acuracia:.1%}, "
                   f"recall {recall_alto:.1%} (notebook: 86,8% e 89,5%)[/dim]")
 
 
@@ -252,14 +253,6 @@ def rodar_frases_cegas(dataset, frases_cegas):
     tabela.add_row("Falsos positivos", str(len(falsos_positivos)), "leve classificado como grave")
     console.print(tabela)
 
-    menor_prob = resultado["prob_alto"].min()
-    maior_prob = resultado["prob_alto"].max()
-    perto_do_meio = resultado["prob_alto"].between(0.4, 0.6).sum()
-    console.print(f"\nConfiança: a probabilidade de alto risco ficou entre "
-                  f"[bold]{menor_prob:.2f}[/bold] e [bold]{maior_prob:.2f}[/bold]")
-    console.print(f"[bold yellow]{perto_do_meio} de {len(resultado)}[/bold yellow] frases ficaram entre "
-                  f"0.40 e 0.60 (quase cara ou coroa)")
-
     erros = resultado[resultado["real"] != resultado["previsto"]]
     for erro in erros.itertuples():
         console.print(f"\n[bold red]✗ Erro:[/bold red] era {risco_colorido(erro.real)}, "
@@ -268,7 +261,52 @@ def rodar_frases_cegas(dataset, frases_cegas):
         console.print(f"  [dim]palavras que mais pesaram:[/dim] "
                       f"[yellow]{palavras_que_mais_pesaram(modelo_final, erro.frase)}[/yellow]")
 
-    return modelo_final
+    return modelo_final, resultado
+
+
+def regua_de_probabilidade(prob_alto, cor, metade=20):
+    """Desenha a probabilidade numa régua de 0 a 1: à esquerda do │ é baixo risco, à direita é alto risco."""
+    lado_baixo = ["─"] * metade
+    lado_alto = ["─"] * metade
+    bolinha = f"[bold {cor}]●[/bold {cor}]"
+    if prob_alto < 0.5:
+        lado_baixo[int(prob_alto / 0.5 * metade)] = bolinha
+    else:
+        lado_alto[min(int((prob_alto - 0.5) / 0.5 * metade), metade - 1)] = bolinha
+    return "".join(lado_baixo) + "│" + "".join(lado_alto)
+
+
+def mostrar_certeza_do_modelo(resultado):
+    titulo("b) Frases cegas · quanto o modelo tem certeza?")
+
+    console.print("O modelo dá a cada frase uma [bold]probabilidade de alto risco[/bold], de 0 a 1. "
+                  "De [bold]0.50[/bold] pra cima, ele responde alto risco.")
+
+    tabela = Table(box=box.SIMPLE)
+    tabela.add_column("Prob.", justify="right", no_wrap=True)
+    tabela.add_column("0" + " " * 18 + "0.5" + " " * 18 + "1", no_wrap=True, min_width=41)
+    tabela.add_column("Real", no_wrap=True)
+    tabela.add_column("", no_wrap=True)
+    tabela.add_column("Frase", no_wrap=True, overflow="ellipsis", max_width=40)
+
+    da_menor_para_a_maior = resultado.sort_values("prob_alto")
+    abaixo_do_limite = da_menor_para_a_maior[da_menor_para_a_maior["prob_alto"] < 0.5]
+    ultima_antes_do_limite = abaixo_do_limite.index[-1]
+
+    for linha in da_menor_para_a_maior.itertuples():
+        marca = "[green]✓[/green]" if linha.real == linha.previsto else "[bold red]✗[/bold red]"
+        tabela.add_row(f"{linha.prob_alto:.2f}",
+                       regua_de_probabilidade(linha.prob_alto, COR_DO_RISCO[linha.real]),
+                       risco_colorido(linha.real), marca, linha.frase,
+                       end_section=(linha.Index == ultima_antes_do_limite))
+    console.print(tabela)
+
+    acertos = (resultado["real"] == resultado["previsto"]).sum()
+    perto_do_limite = resultado["prob_alto"].between(0.4, 0.6).sum()
+    console.print(f"Acertou [bold]{acertos} de {len(resultado)}[/bold], mas por pouco: "
+                  f"[bold yellow]{perto_do_limite} de {len(resultado)}[/bold yellow] ficaram entre 0.40 e 0.60, "
+                  f"coladas no limite.")
+    console.print("Uma palavra a mais ou a menos já muda a resposta (ver c2).")
 
 
 def mostrar_palavras_que_mais_pesam(modelo_final):
@@ -350,18 +388,22 @@ def checar_palavras_que_nao_deveriam_pesar(modelo_final):
 
 def main():
     dataset, frases_cegas = carregar_dados()
+    conferir_com_o_notebook_da_p2(dataset)
 
     comparar_modelos(dataset)
-    conferir_com_o_notebook_da_p2(dataset)
     pausa()
 
-    modelo_final = rodar_frases_cegas(dataset, frases_cegas)
+    modelo_final, resultado_das_cegas = rodar_frases_cegas(dataset, frases_cegas)
+    pausa()
+
+    mostrar_certeza_do_modelo(resultado_das_cegas)
     pausa()
 
     mostrar_palavras_que_mais_pesam(modelo_final)
     pausa()
 
-    rodar_testes("c2) A frase do vídeo, modificada", TESTES_COM_A_FRASE_DO_VIDEO, modelo_final)
+    rodar_testes(f"c2) Mesma queixa do paciente, dita de {len(TESTES_COM_A_FRASE_DO_VIDEO)} jeitos",
+                 TESTES_COM_A_FRASE_DO_VIDEO, modelo_final)
     pausa()
 
     rodar_testes("c3) Outros testes provocativos", OUTROS_TESTES_PROVOCATIVOS, modelo_final)
