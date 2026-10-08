@@ -2,7 +2,7 @@
 
 Módulo de apoio ao diagnóstico que lê relatos de pacientes, identifica sintomas e sugere diagnósticos (Parte 1), e classifica o nível de risco de frases com TF-IDF e Machine Learning (Parte 2).
 
-**Vídeo de demonstração:** (link do YouTube, não listado)
+**Vídeo de demonstração:** (https://youtu.be/I-MGwVa-y5c))
 
 ## Integrantes
 
