@@ -2,7 +2,7 @@
 
 Módulo de apoio ao diagnóstico que lê relatos de pacientes, identifica sintomas e sugere diagnósticos (Parte 1), e classifica o nível de risco de frases com TF-IDF e Machine Learning (Parte 2).
 
-**Vídeo de demonstração:** (https://youtu.be/I-MGwVa-y5c))
+**Vídeo de demonstração:** [Assistir no YouTube](https://youtu.be/I-MGwVa-y5c)
 
 ## Integrantes
 
@@ -51,6 +51,8 @@ jupyter notebook parte2_classificador/classificador_risco.ipynb   # Parte 2 (Ker
 python parte2_classificador/avaliacao_e_vieses.py                 # Avaliação dos modelos e vieses
 ```
 
+---
+
 ## Parte 1 — Extração de sintomas e sugestão de diagnóstico
 
 Sistema **baseado em regras** (sem machine learning): lê relatos de pacientes, procura sintomas conhecidos e sugere a doença mais provável.
@@ -63,7 +65,7 @@ Sistema **baseado em regras** (sem machine learning): lê relatos de pacientes, 
 | `mapa_conhecimento.csv` | Mapa sintoma → doença (36 linhas, 9 doenças, colunas `sintoma_1, sintoma_2, doenca_associada`) |
 | `extracao_diagnostico.py` | Código que lê as frases, identifica sintomas e sugere diagnóstico |
 | `casos_dificeis.txt` | Frases difíceis para testar os limites do sistema |
-| `resultados.csv` | Tabela final gerada pelo código |
+| `resultados.csv` | Tabela final gerada pelo código (criada ao rodar o script) |
 
 Doenças cobertas: infarto agudo do miocárdio, angina, insuficiência cardíaca, arritmia, hipertensão arterial, pericardite, miocardite, estenose aórtica e trombose venosa profunda.
 
@@ -103,7 +105,10 @@ python extracao_diagnostico.py
 
 ### Fontes consultadas
 
-- (citar aqui as fontes usadas para montar o mapa, ex.: Sociedade Brasileira de Cardiologia, Manual MSD)
+- Sociedade Brasileira de Cardiologia (SBC). Diretrizes e materiais para pacientes. https://www.portal.cardiol.br
+- Manual MSD: Distúrbios cardiovasculares. https://www.msdmanuals.com/pt/profissional/distúrbios-cardiovasculares
+
+---
 
 ## Parte 2 — Classificador de risco
 
@@ -115,8 +120,6 @@ Modelo de machine learning que lê a frase de um paciente e classifica como **al
 |---|---|
 | `frases_risco.csv` | 150 frases rotuladas (colunas `frase` e `situacao`) |
 | `classificador_risco.ipynb` | TF-IDF, treino, avaliação e análise de padrões e distorções |
-| `frases_teste_cegas.csv` | 20 frases escritas sem ver o dataset, usadas uma única vez na avaliação final |
-| `avaliacao_e_vieses.py` | Comparação de 3 modelos, teste nas frases cegas e caça aos vieses |
 
 ### Dataset
 
@@ -134,7 +137,9 @@ TF-IDF com palavras e pares de palavras (`ngram_range=(1, 2)`), sem remover stop
 
 ### Como rodar
 
-    jupyter notebook parte2_classificador/classificador_risco.ipynb
+```bash
+jupyter notebook parte2_classificador/classificador_risco.ipynb
+```
 
 Depois, use Kernel → Restart & Run All. O notebook encontra o CSV rodando de dentro da pasta ou da raiz do repositório.
 
@@ -158,9 +163,20 @@ O recall de alto risco é a métrica mais importante, porque um falso negativo m
 
 Os números são otimistas, porque treino e teste foram escritos pelas mesmas pessoas. O teste com frases cegas, na seção de avaliação, mede o desempenho de forma mais honesta.
 
-## Avaliação dos modelos, governança e vieses
+---
+
+## Parte 3 — Avaliação dos modelos, governança e vieses
 
 O notebook da Parte 2 treina e testa um modelo. Esta seção responde outra pergunta: **quanto dá para confiar nele?** Tudo aqui é gerado por `parte2_classificador/avaliacao_e_vieses.py`, com o mesmo CSV, o mesmo TF-IDF e o mesmo split do notebook. O script confere isso: no split da Parte 2, ele reproduz os 86,8% de acurácia e 89,5% de recall.
+
+### Arquivos (`parte2_classificador/`)
+
+| Arquivo | Descrição |
+|---|---|
+| `frases_teste_cegas.csv` | 20 frases escritas sem ver o dataset, usadas uma única vez na avaliação final |
+| `avaliacao_e_vieses.py` | Comparação de 3 modelos, teste nas frases cegas e caça aos vieses |
+
+### Como rodar
 
 ```bash
 python parte2_classificador/avaliacao_e_vieses.py             # mostra tudo de uma vez
@@ -235,6 +251,8 @@ O caso mais claro é a frase do vídeo com "depois de". O sentido clínico é o 
 - **Quem o modelo atende mal:** quem usa negação, escreve com erros, usa gíria regional ou conta a história com muitos detalhes. Na prática, isso pode prejudicar justamente pacientes com menos escolaridade ou de outras regiões. O dataset também não tem idade, sexo nem histórico, que mudam o risco cardíaco de verdade.
 - **LGPD:** dado de saúde é dado pessoal sensível (Lei 13.709/2018, art. 5º, II). Um sistema real precisaria de base legal para tratá-lo (art. 11, como a tutela da saúde por profissionais e serviços de saúde), anonimização, controle de acesso e registro de quem consultou cada dado. Este projeto usa só frases inventadas, sem nenhum dado de pessoa real.
 - **Papel da IA:** o modelo sugere e prioriza, e quem decide é o profissional de saúde. A LGPD garante ao paciente o direito de pedir revisão de decisões tomadas só por sistema automatizado (art. 20). Mostrar a probabilidade junto com o rótulo ajuda nisso: um "alto risco (0,51)" avisa que o modelo está em dúvida e que o caso precisa de olhar humano.
+
+---
 
 ## Aviso
 
